@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Kitchen GraphQL</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: #1e1e1e;
+        }
+        #graphiql {
+            height: 100vh;
+        }
+        .loading {
+            color: white;
+            text-align: center;
+            padding-top: 50px;
+            font-family: sans-serif;
+        }
+    </style>
+    <!-- Используем правильные CDN ссылки -->
+    <link href="https://cdn.jsdelivr.net/npm/graphiql@3.0.0/graphiql.min.css" rel="stylesheet"/>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/graphiql@3.0.0/graphiql.min.js"></script>
+</head>
+<body>
+<div class="loading">Loading GraphiQL...</div>
+<div id="graphiql"></div>
+
+<script>
+    // Простой fetcher для GraphQL
+    function fetchGQL(params) {
+        return fetch('/graphql', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(params),
+        }).then(function(response) {
+            return response.json();
+        });
+    }
+
+    // Рендерим GraphiQL
+    ReactDOM.render(
+        React.createElement(GraphiQL, {
+            fetcher: fetchGQL,
+            defaultEditorToolsVisibility: true,
+        }),
+        document.getElementById('graphiql')
+    );
+
+    // Убираем надпись загрузки
+    document.querySelector('.loading').style.display = 'none';
+</script>
+</body>
+</html>

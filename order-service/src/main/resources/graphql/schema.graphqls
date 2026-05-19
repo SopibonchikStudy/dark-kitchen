@@ -1,0 +1,108 @@
+# Скалярные типы для дат
+scalar DateTime
+scalar Date
+scalar LocalDateTime
+
+# Тип заказа
+type Order {
+    orderId: ID!
+    customerName: String!
+    customerPhone: String
+    deliveryAddress: String
+    items: [OrderItem!]!
+    notes: String
+    status: String!
+    totalAmount: Float!
+    courier: CourierInfo
+    statusHistory: [StatusHistoryEntry!]!
+    createdAt: LocalDateTime!
+    updatedAt: LocalDateTime
+}
+
+# Тип позиции заказа
+type OrderItem {
+    menuItemId: String!
+    name: String!
+    quantity: Int!
+    price: Float!
+    specialInstructions: String
+}
+
+# Тип информации о курьере
+type CourierInfo {
+    courierId: String!
+    courierName: String!
+    courierPhone: String
+}
+
+# Тип записи истории статусов
+type StatusHistoryEntry {
+    status: String!
+    message: String
+    timestamp: LocalDateTime!
+}
+
+# Входные данные для создания заказа
+input CreateOrderInput {
+    customerName: String!
+    customerPhone: String!
+    deliveryAddress: String!
+    items: [OrderItemInput!]!
+    notes: String
+}
+
+# Входные данные для позиции заказа
+input OrderItemInput {
+    menuItemId: String!
+    quantity: Int!
+    specialInstructions: String
+}
+
+# Входные данные для обновления статуса
+input StatusUpdateInput {
+    status: String!
+    message: String
+}
+
+# Входные данные для фильтрации заказов
+input OrderFilter {
+    status: String
+    customerName: String
+}
+
+# Соединение для пагинации (как в учебном проекте)
+type OrderConnection {
+    content: [Order!]!
+    totalElements: Int!
+    pageNumber: Int!
+    pageSize: Int!
+    totalPages: Int!
+}
+
+# Query (запросы)
+type Query {
+    # Получить заказ по ID
+    order(orderId: ID!): Order
+
+    # Получить все заказы с пагинацией и фильтрацией
+    orders(
+        filter: OrderFilter
+        page: Int = 0
+        size: Int = 20
+    ): OrderConnection!
+}
+
+# Mutation (мутации)
+type Mutation {
+    # Создать новый заказ
+    createOrder(input: CreateOrderInput!): Order!
+
+    # Отменить заказ
+    cancelOrder(orderId: ID!): Order!
+
+    # Обновить статус заказа
+    updateOrderStatus(orderId: ID!, status: StatusUpdateInput!): Order!
+
+    # Удалить заказ
+    deleteOrder(orderId: ID!): Boolean!
+}
