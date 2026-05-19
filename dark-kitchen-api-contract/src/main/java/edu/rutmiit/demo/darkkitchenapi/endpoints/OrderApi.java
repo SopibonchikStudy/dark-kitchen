@@ -57,4 +57,6 @@ public interface OrderApi {
             @Parameter(description = "ID заказа") @PathVariable String orderId,
             @Valid @RequestBody StatusUpdateRequest request
     );
+
+
 }

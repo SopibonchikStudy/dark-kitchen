@@ -1,16 +1,14 @@
 package edu.rutmiit.demo.orderservice.controller;
 
-import edu.rutmiit.demo.orderservice.dto.CookingTimeEstimation;
-import edu.rutmiit.demo.orderservice.dto.ItemTime;
-import edu.rutmiit.demo.orderservice.dto.OrderDetailedStatus;
+import edu.rutmiit.demo.darkkitchenapi.dto.*;
+import edu.rutmiit.demo.darkkitchenapi.endpoints.OrderGrpcApi;
 import edu.rutmiit.demo.orderservice.service.OrderService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/orders")
-public class OrderGrpcController {
+public class OrderGrpcController implements OrderGrpcApi {
 
     private final OrderService orderService;
 
@@ -18,19 +16,42 @@ public class OrderGrpcController {
         this.orderService = orderService;
     }
 
-    @GetMapping("/{orderId}/detailed")
-    public OrderDetailedStatus getDetailedStatus(@PathVariable String orderId) {
-        return orderService.getDetailedStatus(orderId);
+    @Override
+    public OrderDetailedStatusResponse getDetailedStatus(String orderId) {
+        var status = orderService.getDetailedStatus(orderId);
+
+        KitchenStatusInfo kitchenInfo = null;
+        if (status.kitchenStatus() != null) {
+            kitchenInfo = new KitchenStatusInfo(
+                    status.kitchenStatus().getOrderId(),
+                    status.kitchenStatus().getStatus(),
+                    status.kitchenStatus().getMessage(),
+                    status.kitchenStatus().getEstimatedSeconds()
+            );
+        }
+
+        DeliveryStatusInfo deliveryInfo = null;
+        if (status.deliveryStatus() != null) {
+            deliveryInfo = new DeliveryStatusInfo(
+                    status.deliveryStatus().getOrderId(),
+                    status.deliveryStatus().getStatus(),
+                    status.deliveryStatus().getCourierId(),
+                    status.deliveryStatus().getCourierName(),
+                    status.deliveryStatus().getEstimatedMinutes()
+            );
+        }
+
+        return new OrderDetailedStatusResponse(status.order(), kitchenInfo, deliveryInfo);
     }
 
-    @PostMapping("/estimate-cooking-time")
-    public CookingTimeEstimation estimateCookingTime(@RequestBody List<String> menuItemIds) {
+    @Override
+    public CookingTimeEstimationResponse estimateCookingTime(List<String> menuItemIds) {
         var grpcResponse = orderService.estimateCookingTime(menuItemIds);
 
-        List<ItemTime> items = grpcResponse.getItemsList().stream()
-                .map(item -> new ItemTime(item.getMenuItemId(), item.getSeconds()))
+        List<ItemCookingTimeInfo> items = grpcResponse.getItemsList().stream()
+                .map(item -> new ItemCookingTimeInfo(item.getMenuItemId(), item.getSeconds()))
                 .toList();
 
-        return new CookingTimeEstimation(grpcResponse.getTotalSeconds(), items);
+        return new CookingTimeEstimationResponse(grpcResponse.getTotalSeconds(), items);
     }
 }
