@@ -1,10 +1,17 @@
-// service/OrderService.java
 package edu.rutmiit.demo.orderservice.service;
 
 import edu.rutmiit.demo.darkkitchenapi.dto.*;
+import edu.rutmiit.demo.grpc.DeliveryStatusResponse;
+import edu.rutmiit.demo.grpc.EstimateCookingTimeResponse;
+import edu.rutmiit.demo.grpc.OrderStatusResponse;
+import edu.rutmiit.demo.orderservice.dto.OrderDetailedStatus;
 import edu.rutmiit.demo.orderservice.event.OrderEventPublisher;
 import edu.rutmiit.demo.orderservice.exception.ResourceNotFoundException;
+import edu.rutmiit.demo.orderservice.grpc.DeliveryGrpcClient;
+import edu.rutmiit.demo.orderservice.grpc.KitchenGrpcClient;
 import edu.rutmiit.demo.orderservice.storage.OrderStorage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -15,12 +22,21 @@ import java.util.Optional;
 @Service
 public class OrderService {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+
     private final OrderStorage storage;
     private final OrderEventPublisher eventPublisher;
+    private final KitchenGrpcClient kitchenGrpcClient;      // ← Добавлено
+    private final DeliveryGrpcClient deliveryGrpcClient;    // ← Добавлено
 
-    public OrderService(OrderStorage storage, OrderEventPublisher eventPublisher) {
+    public OrderService(OrderStorage storage,
+                        OrderEventPublisher eventPublisher,
+                        KitchenGrpcClient kitchenGrpcClient,        // ← Добавлено
+                        DeliveryGrpcClient deliveryGrpcClient) {    // ← Добавлено
         this.storage = storage;
         this.eventPublisher = eventPublisher;
+        this.kitchenGrpcClient = kitchenGrpcClient;
+        this.deliveryGrpcClient = deliveryGrpcClient;
     }
 
     public OrderResponse createOrder(OrderRequest request) {
@@ -137,5 +153,53 @@ public class OrderService {
         eventPublisher.publishOrderStatusUpdated(updated);
 
         return updated;
+    }
+
+    // ==========================================
+    // НОВЫЕ МЕТОДЫ С gRPC
+    // ==========================================
+
+    /**
+     * Получить детальный статус заказа с информацией от кухни и доставки через gRPC
+     */
+    public OrderDetailedStatus getDetailedStatus(String orderId) {
+        OrderResponse order = findById(orderId);
+
+        // gRPC запрос к кухне
+        OrderStatusResponse kitchenStatus = null;
+        try {
+            kitchenStatus = kitchenGrpcClient.getOrderStatus(orderId);
+            log.info("Получен статус кухни для {}: {}", orderId, kitchenStatus.getStatus());
+        } catch (Exception e) {
+            log.error("Ошибка gRPC запроса к кухне для {}: {}", orderId, e.getMessage());
+        }
+
+        // gRPC запрос к доставке (только если заказ уже доставляется)
+        DeliveryStatusResponse deliveryStatus = null;
+        if (List.of("ASSIGNED", "DELIVERING", "DELIVERED").contains(order.getStatus())) {
+            try {
+                deliveryStatus = deliveryGrpcClient.getDeliveryStatus(orderId);
+                log.info("Получен статус доставки для {}: {}", orderId, deliveryStatus.getStatus());
+            } catch (Exception e) {
+                log.error("Ошибка gRPC запроса к доставке для {}: {}", orderId, e.getMessage());
+            }
+        }
+
+        return new OrderDetailedStatus(order, kitchenStatus, deliveryStatus);
+    }
+
+    /**
+     * Оценить время приготовления блюд ДО создания заказа
+     */
+    public EstimateCookingTimeResponse estimateCookingTime(List<String> menuItemIds) {
+        try {
+            EstimateCookingTimeResponse response = kitchenGrpcClient.estimateCookingTime(menuItemIds);
+            log.info("Оценка времени приготовления: {} сек для {} блюд",
+                    response.getTotalSeconds(), menuItemIds.size());
+            return response;
+        } catch (Exception e) {
+            log.error("Ошибка оценки времени приготовления: {}", e.getMessage());
+            throw new RuntimeException("Не удалось оценить время приготовления", e);
+        }
     }
 }

@@ -3,6 +3,10 @@ scalar DateTime
 scalar Date
 scalar LocalDateTime
 
+# ============================================
+# ТИПЫ ЗАКАЗОВ
+# ============================================
+
 # Тип заказа
 type Order {
     orderId: ID!
@@ -42,6 +46,50 @@ type StatusHistoryEntry {
     timestamp: LocalDateTime!
 }
 
+# ============================================
+# gRPC ТИПЫ (детальный статус)
+# ============================================
+
+# Детальный статус заказа (включает gRPC данные)
+type OrderDetailedStatus {
+    order: Order!
+    kitchenStatus: KitchenStatus
+    deliveryStatus: DeliveryStatus
+}
+
+# Статус кухни (из gRPC)
+type KitchenStatus {
+    orderId: String!
+    status: String!
+    message: String!
+    estimatedSeconds: Int!
+}
+
+# Статус доставки (из gRPC)
+type DeliveryStatus {
+    orderId: String!
+    status: String!
+    courierId: String
+    courierName: String
+    estimatedMinutes: Int!
+}
+
+# Результат оценки времени приготовления (из gRPC)
+type EstimateCookingTimeResult {
+    totalSeconds: Int!
+    items: [ItemCookingTime!]!
+}
+
+# Время приготовления одного блюда
+type ItemCookingTime {
+    menuItemId: String!
+    seconds: Int!
+}
+
+# ============================================
+# ВХОДНЫЕ ДАННЫЕ
+# ============================================
+
 # Входные данные для создания заказа
 input CreateOrderInput {
     customerName: String!
@@ -70,7 +118,11 @@ input OrderFilter {
     customerName: String
 }
 
-# Соединение для пагинации (как в учебном проекте)
+# ============================================
+# ПАГИНАЦИЯ
+# ============================================
+
+# Соединение для пагинации
 type OrderConnection {
     content: [Order!]!
     totalElements: Int!
@@ -79,10 +131,16 @@ type OrderConnection {
     totalPages: Int!
 }
 
-# Query (запросы)
+# ============================================
+# QUERY (ЗАПРОСЫ)
+# ============================================
+
 type Query {
     # Получить заказ по ID
     order(orderId: ID!): Order
+
+    # Получить детальный статус заказа (включает gRPC запросы к кухне и доставке)
+    orderDetailed(orderId: ID!): OrderDetailedStatus
 
     # Получить все заказы с пагинацией и фильтрацией
     orders(
@@ -90,9 +148,15 @@ type Query {
         page: Int = 0
         size: Int = 20
     ): OrderConnection!
+
+    # Оценить время приготовления блюд (gRPC запрос к кухне)
+    estimateCookingTime(menuItemIds: [String!]!): EstimateCookingTimeResult!
 }
 
-# Mutation (мутации)
+# ============================================
+# MUTATION (МУТАЦИИ)
+# ============================================
+
 type Mutation {
     # Создать новый заказ
     createOrder(input: CreateOrderInput!): Order!

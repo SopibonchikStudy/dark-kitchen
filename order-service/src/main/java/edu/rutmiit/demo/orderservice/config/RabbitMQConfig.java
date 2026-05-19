@@ -55,6 +55,6 @@ public class RabbitMQConfig {
     public Binding orderStatusBinding() {
         return BindingBuilder.bind(orderStatusQueue())
                 .to(orderExchange())
-                .with("order.status.*");
+                .with("#");
     }
 }

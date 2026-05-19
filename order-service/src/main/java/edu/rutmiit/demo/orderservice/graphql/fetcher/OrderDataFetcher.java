@@ -1,6 +1,8 @@
 package edu.rutmiit.demo.orderservice.graphql.fetcher;
 
 import edu.rutmiit.demo.darkkitchenapi.dto.OrderResponse;
+import edu.rutmiit.demo.grpc.EstimateCookingTimeResponse;
+import edu.rutmiit.demo.orderservice.dto.OrderDetailedStatus;
 import edu.rutmiit.demo.orderservice.graphql.types.OrderConnection;
 import edu.rutmiit.demo.orderservice.graphql.types.OrderFilterInput;
 import edu.rutmiit.demo.orderservice.service.OrderService;
@@ -24,6 +26,26 @@ public class OrderDataFetcher {
         return orderService.findById(orderId);
     }
 
+    // В OrderDataFetcher.java добавьте:
+    @QueryMapping
+    public OrderDetailedStatus orderDetailed(@Argument String orderId) {
+        return orderService.getDetailedStatus(orderId);
+    }
+
+    @QueryMapping
+    public CookingTimeResult estimateCookingTime(@Argument List<String> menuItemIds) {
+        EstimateCookingTimeResponse grpcResponse = orderService.estimateCookingTime(menuItemIds);
+
+        List<CookingItem> items = grpcResponse.getItemsList().stream()
+                .map(item -> new CookingItem(item.getMenuItemId(), item.getSeconds()))
+                .toList();
+
+        return new CookingTimeResult(grpcResponse.getTotalSeconds(), items);
+    }
+
+    // Вспомогательные record'ы
+    public record CookingTimeResult(int totalSeconds, List<CookingItem> items) {}
+    public record CookingItem(String menuItemId, int seconds) {}
     @QueryMapping
     public OrderConnection orders(
             @Argument OrderFilterInput filter,
@@ -47,4 +69,5 @@ public class OrderDataFetcher {
 
         return new OrderConnection(content, totalElements, page, size, totalPages);
     }
+
 }

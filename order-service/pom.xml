@@ -14,59 +14,46 @@
     <artifactId>order-service</artifactId>
     <packaging>jar</packaging>
 
-    <name>Order Service</name>
-    <description>Сервис управления заказами Dark Kitchen</description>
-
     <dependencies>
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-hateoas</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-graphql</artifactId>
+        </dependency>
 
-        <!-- gRPC -->
+        <!-- gRPC (клиент) -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
-            <version>1.59.0</version>
         </dependency>
-
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
-            <version>1.59.0</version>
         </dependency>
-
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
-            <version>1.59.0</version>
         </dependency>
-
-        <!-- javax.annotation for gRPC -->
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
             <version>1.3.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-graphql</artifactId>
         </dependency>
 
         <!-- GraphQL Extended Scalars -->
@@ -76,17 +63,11 @@
             <version>21.0</version>
         </dependency>
 
-        <!-- Swagger/OpenAPI -->
+        <!-- Swagger -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.2.0</version>
-        </dependency>
-
-        <!-- Jackson -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
         </dependency>
 
         <!-- Внутренние модули -->
@@ -94,10 +75,13 @@
             <groupId>edu.rutmiit.demo</groupId>
             <artifactId>dark-kitchen-events-contract</artifactId>
         </dependency>
-
         <dependency>
             <groupId>edu.rutmiit.demo</groupId>
             <artifactId>dark-kitchen-api-contract</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>edu.rutmiit.demo</groupId>
+            <artifactId>dark-kitchen-grpc-contract</artifactId>
         </dependency>
 
         <!-- Test -->

@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option java_package = "edu.rutmiit.demo.grpc";
+option java_multiple_files = true;
+
+package kitchen;
+
+// Сервис кухни
+service KitchenService {
+  // Получить статус заказа на кухне
+  rpc GetOrderStatus (GetOrderStatusRequest) returns (OrderStatusResponse);
+
+  // Получить время приготовления для блюд
+  rpc EstimateCookingTime (EstimateCookingTimeRequest) returns (EstimateCookingTimeResponse);
+}
+
+message GetOrderStatusRequest {
+  string order_id = 1;
+}
+
+message OrderStatusResponse {
+  string order_id = 1;
+  string status = 2;          // COOKING, READY
+  string message = 3;
+  int32 estimated_seconds = 4; // Оставшееся время
+}
+
+message EstimateCookingTimeRequest {
+  repeated string menu_item_ids = 1;
+}
+
+message EstimateCookingTimeResponse {
+  int32 total_seconds = 1;
+  repeated ItemCookingTime items = 2;
+}
+
+message ItemCookingTime {
+  string menu_item_id = 1;
+  int32 seconds = 2;
+}

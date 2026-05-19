@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option java_package = "edu.rutmiit.demo.grpc";
+option java_multiple_files = true;
+
+package delivery;
+
+// Сервис доставки
+service DeliveryService {
+  // Получить статус доставки
+  rpc GetDeliveryStatus (GetDeliveryStatusRequest) returns (DeliveryStatusResponse);
+
+  // Найти ближайшего курьера
+  rpc FindNearestCourier (FindCourierRequest) returns (CourierResponse);
+}
+
+message GetDeliveryStatusRequest {
+  string order_id = 1;
+}
+
+message DeliveryStatusResponse {
+  string order_id = 1;
+  string status = 2;          // ASSIGNED, DELIVERING, DELIVERED
+  string courier_id = 3;
+  string courier_name = 4;
+  int32 estimated_minutes = 5; // Примерное время доставки
+}
+
+message FindCourierRequest {
+  string delivery_address = 1;
+}
+
+message CourierResponse {
+  string courier_id = 1;
+  string courier_name = 2;
+  string courier_phone = 3;
+  int32 estimated_minutes = 4;
+}

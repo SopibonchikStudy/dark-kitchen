@@ -40,6 +40,11 @@ public class OrderStatusListener {
                 case "delivery.courier.assigned" -> handleCourierAssigned(payloadNode);
                 case "delivery.started" -> handleDeliveryStarted(payloadNode);
                 case "delivery.completed" -> handleDeliveryCompleted(payloadNode);
+                case "order.status.updated" -> {
+                    // Это событие публикует сам Order Service, можно игнорировать или логировать
+                    log.debug("Статус заказа обновлён (от order-service): {}",
+                            payloadNode.get("orderId").asText());
+                }
                 default -> log.warn("Неизвестный тип события: {}", eventType);
             }
         } catch (Exception e) {
