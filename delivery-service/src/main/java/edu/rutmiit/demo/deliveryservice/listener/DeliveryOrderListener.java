@@ -27,8 +27,11 @@ public class DeliveryOrderListener {
     private final DeliveryGrpcService deliveryGrpcService;
     private final Random random = new Random();
 
-    // ← Храним активные доставки для возможности прерывания
+    // Активные доставки (для прерывания)
     private final ConcurrentHashMap<String, Thread> activeDeliveries = new ConcurrentHashMap<>();
+
+    // Отменённые заказы (чтобы не начинать доставку)
+    private final ConcurrentHashMap<String, Boolean> cancelledOrders = new ConcurrentHashMap<>();
 
     private final List<Courier> couriers = List.of(
             new Courier("COUR-001", "Алексей Смирнов", "+79001112233"),
@@ -61,11 +64,22 @@ public class DeliveryOrderListener {
             }
 
             // Обработка готового заказа
-            KitchenEvent.CookingCompleted event = objectMapper.treeToValue(
-                    payloadNode, KitchenEvent.CookingCompleted.class);
+            if ("kitchen.cooking.completed".equals(eventType)) {
+                KitchenEvent.CookingCompleted event = objectMapper.treeToValue(
+                        payloadNode, KitchenEvent.CookingCompleted.class);
 
-            log.info("Заказ готов к доставке: orderId={}", event.orderId());
-            assignCourier(event.orderId());
+                String orderId = event.orderId();
+
+                // ← ПРОВЕРЯЕМ, НЕ ОТМЕНЁН ЛИ ЗАКАЗ
+                if (cancelledOrders.containsKey(orderId)) {
+                    log.info("❌ Заказ {} был отменён ранее, доставка не требуется", orderId);
+                    cancelledOrders.remove(orderId);
+                    return;
+                }
+
+                log.info("Заказ готов к доставке: orderId={}", orderId);
+                assignCourier(orderId);
+            }
 
         } catch (Exception e) {
             log.error("Ошибка обработки сообщения: {}", e.getMessage(), e);
@@ -73,16 +87,20 @@ public class DeliveryOrderListener {
     }
 
     /**
-     * Прерывает активную доставку
+     * Прерывает активную доставку или помечает заказ как отменённый
      */
     private void cancelDelivery(String orderId) {
+        // Прерываем активную доставку
         Thread deliveryThread = activeDeliveries.remove(orderId);
         if (deliveryThread != null) {
             deliveryThread.interrupt();
             log.info("❌ Доставка заказа {} прервана", orderId);
         } else {
-            log.info("❌ Доставка заказа {} отменена (не была начата)", orderId);
+            log.info("❌ Заказ {} отменён (доставка ещё не начата)", orderId);
         }
+
+        // Помечаем как отменённый — даже если готовность придёт позже
+        cancelledOrders.put(orderId, true);
         deliveryGrpcService.updateDeliveryStatus(orderId, "CANCELLED", null, 0);
     }
 
@@ -97,7 +115,6 @@ public class DeliveryOrderListener {
     }
 
     private void simulateDelivery(String orderId, Courier courier) {
-        // Сохраняем поток для возможности прерывания
         Thread deliveryThread = Thread.currentThread();
         activeDeliveries.put(orderId, deliveryThread);
 
@@ -126,6 +143,7 @@ public class DeliveryOrderListener {
             deliveryGrpcService.updateDeliveryStatus(orderId, "CANCELLED", courier, 0);
         } finally {
             activeDeliveries.remove(orderId);
+            cancelledOrders.remove(orderId);  // Очищаем
         }
     }
 }

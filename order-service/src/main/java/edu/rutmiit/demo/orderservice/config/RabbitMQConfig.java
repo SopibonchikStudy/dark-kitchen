@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
 
     public static final String ORDER_EXCHANGE = "ex.order";
-    public static final String ORDER_CREATED_QUEUE = "q.order.created";
     public static final String ORDER_STATUS_QUEUE = "q.order.status";
 
     @Bean
@@ -42,42 +41,30 @@ public class RabbitMQConfig {
         return new TopicExchange(ORDER_EXCHANGE);
     }
 
-    @Bean
-    public Queue orderCreatedQueue() {
-        return new Queue(ORDER_CREATED_QUEUE, true);
-    }
-
+    // Только очередь для статусов
     @Bean
     public Queue orderStatusQueue() {
         return new Queue(ORDER_STATUS_QUEUE, true);
     }
 
     @Bean
-    public Binding orderCreatedBinding() {
-        return BindingBuilder.bind(orderCreatedQueue())
-                .to(orderExchange())
-                .with("order.created");
-    }
-
-    // ← Только события от кухни и доставки, НЕ от самого Order Service
-    @Bean
     public Binding kitchenStatusBinding() {
         return BindingBuilder.bind(orderStatusQueue())
                 .to(orderExchange())
-                .with("kitchen.cooking.*");  // cooking.started, cooking.completed
+                .with("kitchen.cooking.*");
     }
 
     @Bean
     public Binding deliveryStatusBinding() {
         return BindingBuilder.bind(orderStatusQueue())
                 .to(orderExchange())
-                .with("delivery.*");  // courier.assigned, started, completed
+                .with("delivery.*");
     }
 
     @Bean
     public Binding orderCancelledBinding() {
         return BindingBuilder.bind(orderStatusQueue())
                 .to(orderExchange())
-                .with("order.cancelled");  // Только отмены (публикует сам Order Service, но нужно для обработки)
+                .with("order.cancelled");
     }
 }
