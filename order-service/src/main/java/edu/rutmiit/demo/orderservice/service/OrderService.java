@@ -97,7 +97,7 @@ public class OrderService {
         if (!List.of("NEW", "COOKING").contains(order.getStatus())) {
             throw new IllegalStateException("Заказ в статусе " + order.getStatus() + " нельзя отменить");
         }
-
+        eventPublisher.publishOrderCancelled(orderId);
         return updateStatus(orderId, "CANCELLED", "Заказ отменён клиентом");
     }
 

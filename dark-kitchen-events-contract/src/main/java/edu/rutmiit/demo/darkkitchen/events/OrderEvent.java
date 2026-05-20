@@ -29,4 +29,10 @@ public sealed interface OrderEvent {
             int quantity,
             double price
     ) {}
+    record Cancelled(
+            String orderId,
+            String reason,
+            String cancelledAt
+    ) implements OrderEvent {}
+
 }

@@ -6,6 +6,7 @@ public final class RoutingKeys {
 
     public static final String ORDER_CREATED = "order.created";
     public static final String ORDER_STATUS_UPDATED = "order.status.updated";
+    public static final String ORDER_CANCELLED = "order.cancelled";
 
     public static final String KITCHEN_COOKING_STARTED = "kitchen.cooking.started";
     public static final String KITCHEN_COOKING_COMPLETED = "kitchen.cooking.completed";

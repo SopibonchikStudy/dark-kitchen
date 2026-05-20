@@ -1,8 +1,8 @@
-// config/RabbitMQConfig.java
 package edu.rutmiit.demo.orderservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -30,6 +30,14 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        return factory;
+    }
+
+    @Bean
     public TopicExchange orderExchange() {
         return new TopicExchange(ORDER_EXCHANGE);
     }
@@ -51,10 +59,25 @@ public class RabbitMQConfig {
                 .with("order.created");
     }
 
+    // ← Только события от кухни и доставки, НЕ от самого Order Service
     @Bean
-    public Binding orderStatusBinding() {
+    public Binding kitchenStatusBinding() {
         return BindingBuilder.bind(orderStatusQueue())
                 .to(orderExchange())
-                .with("#");
+                .with("kitchen.cooking.*");  // cooking.started, cooking.completed
+    }
+
+    @Bean
+    public Binding deliveryStatusBinding() {
+        return BindingBuilder.bind(orderStatusQueue())
+                .to(orderExchange())
+                .with("delivery.*");  // courier.assigned, started, completed
+    }
+
+    @Bean
+    public Binding orderCancelledBinding() {
+        return BindingBuilder.bind(orderStatusQueue())
+                .to(orderExchange())
+                .with("order.cancelled");  // Только отмены (публикует сам Order Service, но нужно для обработки)
     }
 }

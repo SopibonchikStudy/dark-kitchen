@@ -38,4 +38,16 @@ public class RabbitMQConfig {
                 .to(new TopicExchange("ex.order"))
                 .with("kitchen.cooking.completed");
     }
+    @Bean
+    public Binding deliveryOrderBinding() {
+        return BindingBuilder.bind(deliveryQueue())
+                .to(new TopicExchange("ex.order"))
+                .with("kitchen.cooking.completed");  // Принимает kitchen.cooking.completed
+    }
+    @Bean
+    public Binding deliveryCancelBinding() {
+        return BindingBuilder.bind(deliveryQueue())
+                .to(new TopicExchange("ex.order"))
+                .with("order.cancelled");  // Принимает отмену
+    }
 }

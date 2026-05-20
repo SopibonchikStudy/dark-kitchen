@@ -12,15 +12,16 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class KitchenOrderListener {
 
     private static final Logger log = LoggerFactory.getLogger(KitchenOrderListener.class);
-
+    private final ConcurrentHashMap<String, Thread> activeOrders = new ConcurrentHashMap<>();
     private final KitchenEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
-    private final KitchenGrpcService kitchenGrpcService;  // ← ДОБАВИТЬ ПОЛЕ
+    private final KitchenGrpcService kitchenGrpcService;
 
     // ← ОБНОВИТЬ КОНСТРУКТОР
     public KitchenOrderListener(KitchenEventPublisher eventPublisher,
@@ -36,6 +37,16 @@ public class KitchenOrderListener {
         try {
             byte[] body = message.getBody();
             JsonNode root = objectMapper.readTree(body);
+            JsonNode metaNode = root.get("metadata");
+            String eventType = metaNode.get("eventType").asText();
+
+            if ("order.cancelled".equals(eventType)) {
+                JsonNode payloadNode = root.get("payload");
+                String orderId = payloadNode.get("orderId").asText();
+                log.info("❌ Заказ {} отменён, приготовление не требуется", orderId);
+                return;
+            }
+
             JsonNode payloadNode = root.get("payload");
 
             OrderEvent.Created order = objectMapper.treeToValue(
@@ -52,33 +63,29 @@ public class KitchenOrderListener {
     }
 
     private void processOrder(OrderEvent.Created order) {
+        Thread cookingThread = Thread.currentThread();
+        activeOrders.put(order.orderId(), cookingThread);
+
         try {
-            // ← ОБНОВЛЯЕМ СТАТУС ДЛЯ gRPC
-            int cookingTime = estimateCookingTime(order.items());
-            kitchenGrpcService.updateOrderStatus(
-                    order.orderId(), "COOKING", "Заказ готовится", cookingTime);
-
+            kitchenGrpcService.updateOrderStatus(order.orderId(), "COOKING", "Готовится", 300);
             eventPublisher.publishCookingStarted(order.orderId());
-
-            log.info("🍳 Готовим заказ {}...", order.orderId());
             int delay = 30;
-            Thread.sleep(delay * 1000); // 30 секунд готовки
+            Thread.sleep(delay * 1000);
 
-            // ← ОБНОВЛЯЕМ СТАТУС ДЛЯ gRPC
-            kitchenGrpcService.updateOrderStatus(
-                    order.orderId(), "READY", "Заказ готов", 0);
+            // Проверяем, не отменили ли заказ
+            if (!activeOrders.containsKey(order.orderId())) {
+                log.info("❌ Заказ {} был отменён во время приготовления", order.orderId());
+                return;
+            }
 
+            kitchenGrpcService.updateOrderStatus(order.orderId(), "READY", "Готов", 0);
             eventPublisher.publishCookingCompleted(order.orderId(), 5);
 
-            log.info("✅ Заказ {} готов!", order.orderId());
-
         } catch (InterruptedException e) {
+            log.info("❌ Приготовление заказа {} прервано", order.orderId());
             Thread.currentThread().interrupt();
-            log.error("Приготовление прервано: orderId={}", order.orderId());
-
-            // ← ОБНОВЛЯЕМ СТАТУС ОШИБКИ ДЛЯ gRPC
-            kitchenGrpcService.updateOrderStatus(
-                    order.orderId(), "ERROR", "Ошибка приготовления", 0);
+        } finally {
+            activeOrders.remove(order.orderId());
         }
     }
 
@@ -86,5 +93,13 @@ public class KitchenOrderListener {
     private int estimateCookingTime(List<OrderEvent.OrderItem> items) {
         // Можно использовать те же значения что в KitchenGrpcService
         return items.size() * 300; // Примерно 5 минут на блюдо
+    }
+
+    private void cancelCooking(String orderId) {
+        Thread cookingThread = activeOrders.remove(orderId);
+        if (cookingThread != null) {
+            cookingThread.interrupt();  // Прерываем поток приготовления
+            log.info("❌ Приготовление заказа {} прервано", orderId);
+        }
     }
 }
