@@ -32,6 +32,7 @@
         <module>kitchen-service</module>
         <module>delivery-service</module>
         <module>notification-service</module>
+        <module>notification-service2</module>
         <module>gateway</module>
     </modules>
 
