@@ -3,7 +3,6 @@ package edu.rutmiit.demo.orderservice.grpc;
 import edu.rutmiit.demo.grpc.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,15 +26,17 @@ public class KitchenGrpcClient {
     private ManagedChannel channel;
     private KitchenServiceGrpc.KitchenServiceBlockingStub stub;
 
-    @PostConstruct
-    public void init() {
-        channel = ManagedChannelBuilder
-                .forAddress(kitchenHost, kitchenPort)
-                .usePlaintext()
-                .build();
-
-        stub = KitchenServiceGrpc.newBlockingStub(channel);
-        log.info("gRPC клиент кухни подключён к {}:{}", kitchenHost, kitchenPort);
+    // ✅ Ленивая инициализация - при первом вызове
+    private synchronized void init() {
+        if (stub == null) {
+            log.info("🔌 Подключение к gRPC серверу кухни {}:{} (при первом вызове)", kitchenHost, kitchenPort);
+            channel = ManagedChannelBuilder
+                    .forAddress(kitchenHost, kitchenPort)
+                    .usePlaintext()
+                    .build();
+            stub = KitchenServiceGrpc.newBlockingStub(channel);
+            log.info("✅ gRPC клиент кухни создан");
+        }
     }
 
     @PreDestroy
@@ -43,6 +44,7 @@ public class KitchenGrpcClient {
         if (channel != null && !channel.isShutdown()) {
             try {
                 channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                log.info("✅ gRPC канал кухни закрыт");
             } catch (InterruptedException e) {
                 log.error("Ошибка при остановке gRPC канала", e);
                 Thread.currentThread().interrupt();
@@ -50,10 +52,8 @@ public class KitchenGrpcClient {
         }
     }
 
-    /**
-     * Получить статус заказа на кухне
-     */
     public OrderStatusResponse getOrderStatus(String orderId) {
+        init(); // ✅ Инициализация при первом вызове
         log.debug("gRPC запрос статуса заказа: {}", orderId);
 
         GetOrderStatusRequest request = GetOrderStatusRequest.newBuilder()
@@ -63,10 +63,8 @@ public class KitchenGrpcClient {
         return stub.getOrderStatus(request);
     }
 
-    /**
-     * Оценить время приготовления блюд
-     */
     public EstimateCookingTimeResponse estimateCookingTime(List<String> menuItemIds) {
+        init(); // ✅ Инициализация при первом вызове
         log.debug("gRPC запрос времени приготовления для {} блюд", menuItemIds.size());
 
         EstimateCookingTimeRequest request = EstimateCookingTimeRequest.newBuilder()

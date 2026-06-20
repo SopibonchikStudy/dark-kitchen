@@ -1,7 +1,5 @@
 package edu.rutmiit.demo.kitchenservice.listener;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.rutmiit.demo.darkkitchen.events.*;
 import edu.rutmiit.demo.kitchenservice.event.KitchenEventPublisher;
 import edu.rutmiit.demo.kitchenservice.grpc.KitchenGrpcService;
@@ -10,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,11 +19,11 @@ public class KitchenOrderListener {
     private static final Logger log = LoggerFactory.getLogger(KitchenOrderListener.class);
     private final ConcurrentHashMap<String, Thread> activeOrders = new ConcurrentHashMap<>();
     private final KitchenEventPublisher eventPublisher;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final KitchenGrpcService kitchenGrpcService;
 
     public KitchenOrderListener(KitchenEventPublisher eventPublisher,
-                                ObjectMapper objectMapper,
+                                JsonMapper objectMapper,
                                 KitchenGrpcService kitchenGrpcService) {
         this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;

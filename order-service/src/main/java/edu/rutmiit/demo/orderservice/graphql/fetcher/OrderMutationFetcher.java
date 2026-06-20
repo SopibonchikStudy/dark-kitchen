@@ -1,17 +1,14 @@
 package edu.rutmiit.demo.orderservice.graphql.fetcher;
 
+import com.netflix.graphql.dgs.*;
 import edu.rutmiit.demo.darkkitchenapi.dto.*;
 import edu.rutmiit.demo.orderservice.graphql.types.CreateOrderInput;
-import edu.rutmiit.demo.orderservice.graphql.types.OrderFilterInput;
 import edu.rutmiit.demo.orderservice.graphql.types.StatusUpdateInput;
 import edu.rutmiit.demo.orderservice.service.OrderService;
-import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
-import org.springframework.stereotype.Controller;
 
 import java.util.List;
 
-@Controller
+@DgsComponent
 public class OrderMutationFetcher {
 
     private final OrderService orderService;
@@ -20,8 +17,8 @@ public class OrderMutationFetcher {
         this.orderService = orderService;
     }
 
-    @MutationMapping
-    public OrderResponse createOrder(@Argument CreateOrderInput input) {
+    @DgsMutation
+    public OrderResponse createOrder(@InputArgument CreateOrderInput input) {
         OrderRequest request = new OrderRequest(
                 input.customerName(),
                 input.customerPhone(),
@@ -37,23 +34,15 @@ public class OrderMutationFetcher {
         return orderService.createOrder(request);
     }
 
-    @MutationMapping
-    public OrderResponse cancelOrder(@Argument String orderId) {
+    @DgsMutation
+    public OrderResponse cancelOrder(@InputArgument String orderId) {
         return orderService.cancelOrder(orderId);
     }
 
-    @MutationMapping
-    public OrderResponse updateOrderStatus(@Argument String orderId, @Argument StatusUpdateInput status) {
+    @DgsMutation
+    public OrderResponse updateOrderStatus(
+            @InputArgument String orderId,
+            @InputArgument StatusUpdateInput status) {
         return orderService.updateStatus(orderId, status.status(), status.message());
-    }
-
-    @MutationMapping
-    public boolean deleteOrder(@Argument String orderId) {
-        try {
-            orderService.cancelOrder(orderId);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

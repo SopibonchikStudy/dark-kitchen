@@ -1,7 +1,5 @@
 package edu.rutmiit.demo.deliveryservice.listener;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode;
 import edu.rutmiit.demo.darkkitchen.events.KitchenEvent;
 import edu.rutmiit.demo.deliveryservice.event.DeliveryEventPublisher;
 import edu.rutmiit.demo.deliveryservice.grpc.DeliveryGrpcService;
@@ -12,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 import java.util.Random;
@@ -23,7 +23,7 @@ public class DeliveryOrderListener {
     private static final Logger log = LoggerFactory.getLogger(DeliveryOrderListener.class);
 
     private final DeliveryEventPublisher eventPublisher;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final DeliveryGrpcService deliveryGrpcService;
     private final Random random = new Random();
 
@@ -40,7 +40,7 @@ public class DeliveryOrderListener {
     );
 
     public DeliveryOrderListener(DeliveryEventPublisher eventPublisher,
-                                 ObjectMapper objectMapper,
+                                 JsonMapper objectMapper,
                                  DeliveryGrpcService deliveryGrpcService) {
         this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;

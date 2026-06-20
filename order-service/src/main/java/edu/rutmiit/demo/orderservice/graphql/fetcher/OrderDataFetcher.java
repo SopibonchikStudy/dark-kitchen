@@ -1,18 +1,17 @@
 package edu.rutmiit.demo.orderservice.graphql.fetcher;
 
+import com.netflix.graphql.dgs.*;
 import edu.rutmiit.demo.darkkitchenapi.dto.OrderResponse;
 import edu.rutmiit.demo.grpc.EstimateCookingTimeResponse;
 import edu.rutmiit.demo.orderservice.dto.OrderDetailedStatus;
 import edu.rutmiit.demo.orderservice.graphql.types.OrderConnection;
 import edu.rutmiit.demo.orderservice.graphql.types.OrderFilterInput;
 import edu.rutmiit.demo.orderservice.service.OrderService;
-import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.QueryMapping;
-import org.springframework.stereotype.Controller;
+import graphql.schema.DataFetchingEnvironment;
 
 import java.util.List;
 
-@Controller
+@DgsComponent
 public class OrderDataFetcher {
 
     private final OrderService orderService;
@@ -21,19 +20,18 @@ public class OrderDataFetcher {
         this.orderService = orderService;
     }
 
-    @QueryMapping
-    public OrderResponse order(@Argument String orderId) {
+    @DgsQuery
+    public OrderResponse order(@InputArgument String orderId) {
         return orderService.findById(orderId);
     }
 
-    // В OrderDataFetcher.java добавьте:
-    @QueryMapping
-    public OrderDetailedStatus orderDetailed(@Argument String orderId) {
+    @DgsQuery
+    public OrderDetailedStatus orderDetailed(@InputArgument String orderId) {
         return orderService.getDetailedStatus(orderId);
     }
 
-    @QueryMapping
-    public CookingTimeResult estimateCookingTime(@Argument List<String> menuItemIds) {
+    @DgsQuery
+    public CookingTimeResult estimateCookingTime(@InputArgument List<String> menuItemIds) {
         EstimateCookingTimeResponse grpcResponse = orderService.estimateCookingTime(menuItemIds);
 
         List<CookingItem> items = grpcResponse.getItemsList().stream()
@@ -46,15 +44,15 @@ public class OrderDataFetcher {
     // Вспомогательные record'ы
     public record CookingTimeResult(int totalSeconds, List<CookingItem> items) {}
     public record CookingItem(String menuItemId, int seconds) {}
-    @QueryMapping
+
+    @DgsQuery
     public OrderConnection orders(
-            @Argument OrderFilterInput filter,
-            @Argument int page,
-            @Argument int size) {
+            @InputArgument OrderFilterInput filter,
+            @InputArgument int page,
+            @InputArgument int size) {
 
         List<OrderResponse> allOrders = orderService.findAll(filter != null ? filter.status() : null);
 
-        // Пагинация
         int totalElements = allOrders.size();
         int totalPages = (int) Math.ceil((double) totalElements / size);
         int from = page * size;
@@ -69,5 +67,4 @@ public class OrderDataFetcher {
 
         return new OrderConnection(content, totalElements, page, size, totalPages);
     }
-
 }

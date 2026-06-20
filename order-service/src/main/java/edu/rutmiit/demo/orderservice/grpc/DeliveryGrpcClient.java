@@ -3,7 +3,6 @@ package edu.rutmiit.demo.orderservice.grpc;
 import edu.rutmiit.demo.grpc.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,15 +25,17 @@ public class DeliveryGrpcClient {
     private ManagedChannel channel;
     private DeliveryServiceGrpc.DeliveryServiceBlockingStub stub;
 
-    @PostConstruct
-    public void init() {
-        channel = ManagedChannelBuilder
-                .forAddress(deliveryHost, deliveryPort)
-                .usePlaintext()
-                .build();
-
-        stub = DeliveryServiceGrpc.newBlockingStub(channel);
-        log.info("gRPC клиент доставки подключён к {}:{}", deliveryHost, deliveryPort);
+    // ✅ Ленивая инициализация
+    private synchronized void init() {
+        if (stub == null) {
+            log.info("🔌 Подключение к gRPC серверу доставки {}:{} (при первом вызове)", deliveryHost, deliveryPort);
+            channel = ManagedChannelBuilder
+                    .forAddress(deliveryHost, deliveryPort)
+                    .usePlaintext()
+                    .build();
+            stub = DeliveryServiceGrpc.newBlockingStub(channel);
+            log.info("✅ gRPC клиент доставки создан");
+        }
     }
 
     @PreDestroy
@@ -42,6 +43,7 @@ public class DeliveryGrpcClient {
         if (channel != null && !channel.isShutdown()) {
             try {
                 channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                log.info("✅ gRPC канал доставки закрыт");
             } catch (InterruptedException e) {
                 log.error("Ошибка при остановке gRPC канала", e);
                 Thread.currentThread().interrupt();
@@ -49,10 +51,8 @@ public class DeliveryGrpcClient {
         }
     }
 
-    /**
-     * Получить статус доставки заказа
-     */
     public DeliveryStatusResponse getDeliveryStatus(String orderId) {
+        init();
         log.debug("gRPC запрос статуса доставки: {}", orderId);
 
         GetDeliveryStatusRequest request = GetDeliveryStatusRequest.newBuilder()
@@ -62,10 +62,8 @@ public class DeliveryGrpcClient {
         return stub.getDeliveryStatus(request);
     }
 
-    /**
-     * Найти ближайшего курьера
-     */
     public CourierResponse findNearestCourier(String address) {
+        init();
         log.debug("gRPC запрос поиска курьера для: {}", address);
 
         FindCourierRequest request = FindCourierRequest.newBuilder()

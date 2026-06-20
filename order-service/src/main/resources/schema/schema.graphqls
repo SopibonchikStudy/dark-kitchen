@@ -3,9 +3,7 @@ scalar DateTime
 scalar Date
 scalar LocalDateTime
 
-# ============================================
-# ТИПЫ ЗАКАЗОВ
-# ============================================
+
 
 # Тип заказа
 type Order {
@@ -46,9 +44,7 @@ type StatusHistoryEntry {
     timestamp: LocalDateTime!
 }
 
-# ============================================
-# gRPC ТИПЫ (детальный статус)
-# ============================================
+
 
 # Детальный статус заказа (включает gRPC данные)
 type OrderDetailedStatus {
@@ -86,9 +82,7 @@ type ItemCookingTime {
     seconds: Int!
 }
 
-# ============================================
-# ВХОДНЫЕ ДАННЫЕ
-# ============================================
+
 
 # Входные данные для создания заказа
 input CreateOrderInput {
@@ -118,9 +112,7 @@ input OrderFilter {
     customerName: String
 }
 
-# ============================================
-# ПАГИНАЦИЯ
-# ============================================
+
 
 # Соединение для пагинации
 type OrderConnection {
@@ -131,9 +123,7 @@ type OrderConnection {
     totalPages: Int!
 }
 
-# ============================================
-# QUERY (ЗАПРОСЫ)
-# ============================================
+
 
 type Query {
     # Получить заказ по ID
@@ -153,9 +143,7 @@ type Query {
     estimateCookingTime(menuItemIds: [String!]!): EstimateCookingTimeResult!
 }
 
-# ============================================
-# MUTATION (МУТАЦИИ)
-# ============================================
+
 
 type Mutation {
     # Создать новый заказ
@@ -166,7 +154,4 @@ type Mutation {
 
     # Обновить статус заказа
     updateOrderStatus(orderId: ID!, status: StatusUpdateInput!): Order!
-
-    # Удалить заказ
-    deleteOrder(orderId: ID!): Boolean!
 }

@@ -2,30 +2,49 @@ package edu.rutmiit.demo.orderservice.graphql.exception;
 
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
-import graphql.schema.DataFetchingEnvironment;
-import org.springframework.graphql.execution.DataFetcherExceptionResolverAdapter;
+import graphql.execution.DataFetcherExceptionHandler;
+import graphql.execution.DataFetcherExceptionHandlerParameters;
+import graphql.execution.DataFetcherExceptionHandlerResult;
+import graphql.execution.ResultPath;
+import graphql.language.SourceLocation;
 import org.springframework.graphql.execution.ErrorType;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
+
 @Component
-public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter {
+public class GraphQLExceptionHandler implements DataFetcherExceptionHandler {
 
     @Override
-    protected GraphQLError resolveToSingleError(Throwable ex, DataFetchingEnvironment env) {
-        if (ex instanceof IllegalArgumentException) {
-            return GraphqlErrorBuilder.newError()
+    public CompletableFuture<DataFetcherExceptionHandlerResult> handleException(
+            DataFetcherExceptionHandlerParameters handlerParameters) {
+
+        Throwable exception = handlerParameters.getException();
+        ResultPath path = handlerParameters.getPath();
+        SourceLocation location = handlerParameters.getSourceLocation();
+
+        GraphQLError error;
+
+        if (exception instanceof IllegalArgumentException) {
+            error = GraphqlErrorBuilder.newError()
                     .errorType(ErrorType.BAD_REQUEST)
-                    .message(ex.getMessage())
-                    .path(env.getExecutionStepInfo().getPath())
-                    .location(env.getField().getSourceLocation())
+                    .message(exception.getMessage())
+                    .path(path)
+                    .location(location)
+                    .build();
+        } else {
+            error = GraphqlErrorBuilder.newError()
+                    .errorType(ErrorType.INTERNAL_ERROR)
+                    .message("Внутренняя ошибка сервера: " + exception.getMessage())
+                    .path(path)
+                    .location(location)
                     .build();
         }
 
-        return GraphqlErrorBuilder.newError()
-                .errorType(ErrorType.INTERNAL_ERROR)
-                .message("Внутренняя ошибка сервера: " + ex.getMessage())
-                .path(env.getExecutionStepInfo().getPath())
-                .location(env.getField().getSourceLocation())
-                .build();
+        return CompletableFuture.completedFuture(
+                DataFetcherExceptionHandlerResult.newResult()
+                        .error(error)
+                        .build()
+        );
     }
 }
